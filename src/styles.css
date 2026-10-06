@@ -110,3 +110,35 @@
 .anim-wave { animation: wave 1s ease-in-out infinite; transform-origin: center; }
 .diag-clip { clip-path: polygon(0 8%,100% 0,100% 92%,0 100%); }
 .diag-clip2 { clip-path: polygon(0 0,100% 8%,100% 100%,0 92%); }
+
+@utility field {
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1px solid var(--input);
+  background: oklch(0 0 0 / 0.3);
+  padding: 0.7rem 1rem;
+  color: var(--foreground);
+  outline: none;
+  &:focus { border-color: var(--ring); }
+}
+@utility btn-primary {
+  border-radius: 9999px;
+  background-image: var(--gradient-primary);
+  color: var(--primary-foreground);
+  font-weight: 700;
+  padding: 0.85rem 1.75rem;
+  box-shadow: var(--shadow-glow);
+  transition: transform .2s, opacity .2s;
+  &:hover { transform: translateY(-1px); }
+  &:disabled { opacity: .5; transform: none; }
+}
+@utility btn-ghost {
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--glass);
+  padding: 0.85rem 1.5rem;
+  font-weight: 500;
+  color: var(--foreground);
+  transition: border-color .2s;
+  &:hover { border-color: var(--ring); }
+}
