@@ -14,7 +14,137 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      lessons: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          position: number
+          theme: string
+          video_url: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          position?: number
+          theme?: string
+          video_url: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          position?: number
+          theme?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
+      progress: {
+        Row: {
+          completed_at: string | null
+          id: string
+          lesson_id: string
+          position_seconds: number
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          lesson_id: string
+          position_seconds?: number
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          lesson_id?: string
+          position_seconds?: number
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "progress_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "progress_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      students: {
+        Row: {
+          age: number
+          created_at: string
+          first_name: string
+          id: string
+          last_name: string
+          status: string
+          token: string
+        }
+        Insert: {
+          age: number
+          created_at?: string
+          first_name: string
+          id?: string
+          last_name: string
+          status?: string
+          token?: string
+        }
+        Update: {
+          age?: number
+          created_at?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          status?: string
+          token?: string
+        }
+        Relationships: []
+      }
+      visits: {
+        Row: {
+          first_at: string
+          id: string
+          last_at: string
+          student_id: string
+          visited_on: string
+        }
+        Insert: {
+          first_at?: string
+          id?: string
+          last_at?: string
+          student_id: string
+          visited_on?: string
+        }
+        Update: {
+          first_at?: string
+          id?: string
+          last_at?: string
+          student_id?: string
+          visited_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visits_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
