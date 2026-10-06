@@ -4,28 +4,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * Design system definition.
- *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
- */
-
 @theme inline {
+  --font-display: "Archivo", sans-serif;
+  --font-body: "Space Grotesk", sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -40,105 +27,86 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-ring-offset-background: var(--background);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --color-glass: var(--glass);
+  --color-ink: var(--ink);
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
-}
-
-.dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
+  --radius: 1rem;
+  --background: oklch(0.13 0.02 265);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(1 0 0 / 5%);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.17 0.03 265);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.79 0.14 205);
+  --primary-foreground: oklch(0.13 0.02 265);
+  --secondary: oklch(0.79 0.1 275);
+  --secondary-foreground: oklch(0.13 0.02 265);
+  --muted: oklch(1 0 0 / 6%);
+  --muted-foreground: oklch(1 0 0 / 55%);
+  --accent: oklch(0.82 0.15 165);
+  --accent-foreground: oklch(0.13 0.02 265);
+  --success: oklch(0.8 0.16 160);
+  --destructive: oklch(0.68 0.2 22);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --ring: oklch(0.79 0.14 205);
+  --glass: oklch(1 0 0 / 6%);
+  --ink: oklch(0.13 0.02 265);
+  --gradient-primary: linear-gradient(90deg, oklch(0.82 0.14 205), oklch(0.7 0.15 235));
+  --gradient-logo: linear-gradient(135deg, oklch(0.82 0.14 205), oklch(0.68 0.15 240), oklch(0.5 0.2 270));
+  --gradient-text: linear-gradient(90deg, oklch(0.87 0.12 205), oklch(0.8 0.1 275));
+  --gradient-page: radial-gradient(70% 55% at 15% -5%, oklch(0.79 0.14 205 / 0.16), transparent 60%),
+    radial-gradient(60% 50% at 100% 0%, oklch(0.6 0.2 275 / 0.14), transparent 55%),
+    radial-gradient(80% 60% at 50% 120%, oklch(0.6 0.12 180 / 0.14), transparent 60%);
+  --shadow-glow: 0 14px 40px -12px oklch(0.79 0.14 205 / 0.75);
+  --shadow-deep: 0 30px 80px -30px oklch(0 0 0 / 0.8);
 }
 
 @layer base {
-  * {
-    border-color: var(--color-border);
-  }
-
+  * { border-color: var(--color-border); }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-body);
   }
+  h1, h2, h3, .font-display { font-family: var(--font-display); }
 }
+
+@utility glass {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+}
+@utility bg-page { background-image: var(--gradient-page); }
+@utility bg-gradient-primary { background-image: var(--gradient-primary); }
+@utility bg-gradient-logo { background-image: var(--gradient-logo); }
+@utility text-gradient {
+  background-image: var(--gradient-text);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+@utility shadow-glow { box-shadow: var(--shadow-glow); }
+@utility shadow-deep { box-shadow: var(--shadow-deep); }
+
+@keyframes floaty { 0%,100% { transform: translate3d(0,0,0) } 50% { transform: translate3d(0,-14px,0) } }
+@keyframes drift { 0% { transform: translate3d(-120px,-60px,0) rotate(-8deg) } 100% { transform: translate3d(140px,80px,0) rotate(6deg) } }
+@keyframes pulseRing { 0% { transform: scale(.85); opacity: .55 } 70% { transform: scale(1.4); opacity: 0 } 100% { opacity: 0 } }
+@keyframes wave { 0%,100% { transform: scaleY(.35) } 50% { transform: scaleY(1) } }
+.anim-float { animation: floaty 6s ease-in-out infinite; }
+.anim-float2 { animation: floaty 8s ease-in-out infinite; animation-delay: -2s; }
+.anim-drift { animation: drift 18s ease-in-out infinite alternate; }
+.anim-ring { animation: pulseRing 2.4s ease-out infinite; }
+.anim-ring2 { animation: pulseRing 2.4s ease-out infinite; animation-delay: .8s; }
+.anim-wave { animation: wave 1s ease-in-out infinite; transform-origin: center; }
+.diag-clip { clip-path: polygon(0 8%,100% 0,100% 92%,0 100%); }
+.diag-clip2 { clip-path: polygon(0 0,100% 8%,100% 100%,0 92%); }
