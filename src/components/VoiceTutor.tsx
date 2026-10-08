@@ -249,7 +249,7 @@ export function VoiceTutor({
 
 const INKS = ["#22d3ee", "#34d399", "#f472b6", "#facc15", "#ffffff"];
 
-function DrawingBoard({ onSubmit }: { onSubmit: (dataUrl: string) => void }) {
+function DrawingBoard({ onSubmit, disabled }: { onSubmit: (dataUrl: string) => void; disabled?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const [ink, setInk] = useState<string>(INKS[0]!);
@@ -320,8 +320,8 @@ function DrawingBoard({ onSubmit }: { onSubmit: (dataUrl: string) => void }) {
         <button
           className="btn-primary text-2xl"
           aria-label="pronto"
-          disabled={empty}
-          onClick={() => onSubmit(ref.current!.toDataURL("image/jpeg", 0.7))}
+          disabled={empty || disabled}
+          onClick={() => { onSubmit(ref.current!.toDataURL("image/jpeg", 0.7)); clear(); }}
         >
           ✅
         </button>
