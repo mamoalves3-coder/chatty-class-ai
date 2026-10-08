@@ -107,22 +107,26 @@ export const tutorTurn = createServerFn({ method: "POST" })
     tokenSchema
       .extend({
         lessonId: z.string().uuid(),
-        history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(4000) })).max(40),
+        history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(4000) })).max(60),
+        drawing: z.string().startsWith("data:image/").max(3_000_000).optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const { db } = await import("./school.server");
+    const { db, todayKey, LESSONS_PER_DAY } = await import("./school.server");
     const { runTutor } = await import("./tutor.server");
     const s = await approvedStudent(data.token);
     const { data: lesson } = await db().from("lessons").select("position, theme, description").eq("id", data.lessonId).single();
     if (!lesson) throw new Error("Aula não encontrada");
     try {
-      const text = await runTutor({ student: s, lesson, history: data.history });
-      return { text };
+      const text = await runTutor({ student: s, lesson, history: data.history, drawing: data.drawing });
+      const { data: prog } = await db().from("progress").select("completed_at").eq("student_id", s.id);
+      const today = todayKey();
+      const dayDone = (prog ?? []).filter((p) => p.completed_at && todayKey(new Date(p.completed_at)) === today).length >= LESSONS_PER_DAY;
+      return { text, dayDone };
     } catch (e) {
       console.error("tutor error", e);
-      return { text: "", error: "A tutora não conseguiu responder agora. Tenta novamente daqui a pouco." };
+      return { text: "", dayDone: false, error: "A tutora não conseguiu responder agora. Tenta novamente daqui a pouco." };
     }
   });
 

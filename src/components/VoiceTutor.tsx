@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { tutorTurn } from "@/lib/school.functions";
 
 type Msg = { role: "user" | "assistant"; content: string };
-type Phase = "thinking" | "speaking" | "listening" | "idle" | "done" | "error";
+type Phase = "drawing" | "thinking" | "speaking" | "listening" | "idle" | "done" | "error";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getRecognition(): any {
@@ -54,6 +54,7 @@ export function VoiceTutor({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recRef = useRef<any>(null);
 
+  const retries = useRef(0);
   const listen = useCallback((history: Msg[]) => {
     const rec = getRecognition();
     if (!rec) {
@@ -69,11 +70,21 @@ export function VoiceTutor({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onresult = (e: any) => {
       got = true;
+      retries.current = 0;
       const text = e.results[0][0].transcript as string;
       void send(history, text);
     };
-    rec.onerror = () => alive.current && !got && setPhase("idle");
-    rec.onend = () => alive.current && !got && setPhase("idle");
+    let failed = false;
+    const fail = () => {
+      if (failed || got || !alive.current) return;
+      failed = true;
+      if (retries.current < 2) {
+        retries.current++;
+        setTimeout(() => alive.current && listen(history), 400);
+      } else setPhase("idle");
+    };
+    rec.onerror = fail;
+    rec.onend = fail;
     setPhase("listening");
     try {
       rec.start();
@@ -84,11 +95,11 @@ export function VoiceTutor({
   }, []);
 
   const ask = useCallback(
-    async (history: Msg[]) => {
+    async (history: Msg[], drawing?: string) => {
       setPhase("thinking");
       setError(null);
       try {
-        const r = await turn({ data: { token, lessonId, history } });
+        const r = await turn({ data: { token, lessonId, history, drawing } });
         if (!alive.current) return;
         if (r.error || !r.text) {
           setError(r.error ?? "Sem resposta");
@@ -96,20 +107,23 @@ export function VoiceTutor({
           return;
         }
         const done = r.text.includes("[FIM]");
-        const clean = r.text.replace("[FIM]", "").trim();
+        const wantsDrawing = r.text.includes("[DESENHO]");
+        let clean = r.text.replace("[FIM]", "").replace(/\[DESENHO\]/g, "").trim();
+        if (done && r.dayDone) clean += ` ${studentName}, por hoje é tudo, até amanhã, prática tudo o que você aprendeu!`;
         const next = [...history, { role: "assistant" as const, content: clean }];
         setMsgs(next);
-        setPhase("speaking");
+        if (wantsDrawing && !done) setPhase("drawing");
+        else setPhase("speaking");
         await speak(clean);
         if (!alive.current) return;
         if (done) setPhase("done");
-        else listen(next);
+        else if (!wantsDrawing) listen(next);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Erro");
         setPhase("error");
       }
     },
-    [turn, token, lessonId, listen],
+    [turn, token, lessonId, listen, studentName],
   );
 
   const send = useCallback(
@@ -119,6 +133,16 @@ export function VoiceTutor({
       await ask(next);
     },
     [ask],
+  );
+
+  const sendDrawing = useCallback(
+    async (dataUrl: string) => {
+      window.speechSynthesis?.cancel();
+      const next = [...msgs, { role: "user" as const, content: "(a criança enviou um desenho da lousa)" }];
+      setMsgs(next);
+      await ask(next, dataUrl);
+    },
+    [msgs, ask],
   );
 
   useEffect(() => {
@@ -134,7 +158,7 @@ export function VoiceTutor({
 
   const last = [...msgs].reverse().find((m) => m.role === "assistant");
   const status =
-    phase === "thinking" ? "a pensar…" : phase === "speaking" ? "a falar" : phase === "listening" ? "a ouvir-te…" : phase === "done" ? "sessão terminada" : phase === "error" ? "erro" : "à tua espera";
+    phase === "thinking" ? "a pensar…" : phase === "speaking" ? "a falar" : phase === "listening" ? "a ouvir-te…" : phase === "done" ? "sessão terminada" : phase === "drawing" ? "desenha na lousa" : phase === "error" ? "erro" : "à tua espera";
 
   return (
     <div className="fixed inset-0 z-40 overflow-y-auto bg-ink/80 p-4 backdrop-blur-md">
@@ -179,6 +203,8 @@ export function VoiceTutor({
             )}
           </div>
 
+          {phase === "drawing" && <DrawingBoard onSubmit={sendDrawing} />}
+
           {(phase === "idle" || phase === "listening") && (
             <form
               className="mt-6 flex gap-2"
@@ -214,6 +240,89 @@ export function VoiceTutor({
             ))}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+const INKS = ["#22d3ee", "#34d399", "#f472b6", "#facc15", "#ffffff"];
+
+function DrawingBoard({ onSubmit }: { onSubmit: (dataUrl: string) => void }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const drawing = useRef(false);
+  const [ink, setInk] = useState<string>(INKS[0]!);
+  const [empty, setEmpty] = useState(true);
+
+  const clear = () => {
+    const c = ref.current;
+    if (!c) return;
+    const ctx = c.getContext("2d")!;
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(0, 0, c.width, c.height);
+    setEmpty(true);
+  };
+  useEffect(clear, []);
+
+  const pos = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const c = ref.current!;
+    const r = c.getBoundingClientRect();
+    return [((e.clientX - r.left) / r.width) * c.width, ((e.clientY - r.top) / r.height) * c.height] as const;
+  };
+  const down = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drawing.current = true;
+    const ctx = ref.current!.getContext("2d")!;
+    const [x, y] = pos(e);
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 14;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 0.1, y + 0.1);
+    ctx.stroke();
+    setEmpty(false);
+  };
+  const move = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!drawing.current) return;
+    const ctx = ref.current!.getContext("2d")!;
+    const [x, y] = pos(e);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+  const up = () => (drawing.current = false);
+
+  return (
+    <div className="mt-6 space-y-3">
+      <canvas
+        ref={ref}
+        width={640}
+        height={440}
+        className="aspect-[16/11] w-full touch-none rounded-2xl border-2 border-primary/60 shadow-glow"
+        onPointerDown={down}
+        onPointerMove={move}
+        onPointerUp={up}
+        onPointerLeave={up}
+      />
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {INKS.map((c) => (
+          <button
+            key={c}
+            aria-label="cor da tinta"
+            onClick={() => setInk(c)}
+            className={`h-10 w-10 rounded-full border-4 ${ink === c ? "border-foreground" : "border-transparent"}`}
+            style={{ background: c }}
+          />
+        ))}
+        <button className="btn-ghost" onClick={clear} aria-label="apagar">🧽</button>
+        <button
+          className="btn-primary text-2xl"
+          aria-label="pronto"
+          disabled={empty}
+          onClick={() => onSubmit(ref.current!.toDataURL("image/jpeg", 0.7))}
+        >
+          ✅
+        </button>
       </div>
     </div>
   );
