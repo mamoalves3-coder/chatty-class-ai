@@ -5,7 +5,7 @@ export async function runTutor(opts: {
   student: { first_name: string; last_name: string; age: number };
   lesson: { position: number; theme: string; description: string };
   history: { role: "user" | "assistant"; content: string }[];
-  drawing?: string;
+  drawing?: string | undefined;
 }) {
   const apiKey = process.env["LOVABLE_API_KEY"];
   if (!apiKey) throw new Error("IA não configurada");
@@ -36,7 +36,7 @@ Regras:
       : opts.history.map((m) => ({ role: m.role, content: m.content }) as ModelMessage);
   if (opts.drawing && messages.length) {
     const last = messages[messages.length - 1];
-    if (last.role === "user") {
+    if (last?.role === "user") {
       messages[messages.length - 1] = {
         role: "user",
         content: [

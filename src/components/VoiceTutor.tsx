@@ -250,7 +250,7 @@ const INKS = ["#22d3ee", "#34d399", "#f472b6", "#facc15", "#ffffff"];
 function DrawingBoard({ onSubmit }: { onSubmit: (dataUrl: string) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
-  const [ink, setInk] = useState(INKS[0]);
+  const [ink, setInk] = useState<string>(INKS[0]!);
   const [empty, setEmpty] = useState(true);
 
   const clear = () => {
