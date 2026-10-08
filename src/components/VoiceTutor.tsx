@@ -106,6 +106,24 @@ export function VoiceTutor({
   const [phase, setPhase] = useState<Phase>("thinking");
   const [error, setError] = useState<string | null>(null);
   const [canListen, setCanListen] = useState(true);
+  const [needTap, setNeedTap] = useState(false);
+  const pending = useRef<{ text: string; after: () => void } | null>(null);
+  const tapToHear = async () => {
+    unlockSpeech();
+    setNeedTap(false);
+    const p = pending.current;
+    pending.current = null;
+    if (!p) return;
+    setPhase("speaking");
+    await speak(p.text);
+    p.after();
+  };
+  const replay = async () => {
+    const t = [...msgs].reverse().find((m) => m.role === "assistant")?.content;
+    if (!t) return;
+    unlockSpeech();
+    await speak(t);
+  };
   const alive = useRef(true);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recRef = useRef<any>(null);
@@ -170,10 +188,20 @@ export function VoiceTutor({
         setMsgs(next);
         if (wantsDrawing && !done) setPhase("drawing");
         else setPhase("speaking");
-        await speak(clean);
+        const after = () => {
+          if (!alive.current) return;
+          if (done) setPhase("done");
+          else if (wantsDrawing) setPhase("drawing");
+          else listen(next);
+        };
+        const ok = await speak(clean);
         if (!alive.current) return;
-        if (done) setPhase("done");
-        else if (!wantsDrawing) listen(next);
+        if (!ok) {
+          pending.current = { text: clean, after };
+          setNeedTap(true);
+          return;
+        }
+        after();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Erro");
         setPhase("error");
@@ -253,7 +281,15 @@ export function VoiceTutor({
             </div>
           </div>
 
+          {needTap && (
+            <button onClick={tapToHear} className="btn-primary mt-8 w-full py-6 text-2xl anim-float">
+              🔊 Tocar para ouvir a Tia Iris
+            </button>
+          )}
           <div className="mt-8 flex flex-wrap justify-center gap-3">
+            {!needTap && last && (phase === "drawing" || phase === "idle" || phase === "done") && (
+              <button className="btn-ghost text-xl" aria-label="ouvir de novo" onClick={replay}>🔊</button>
+            )}
             {phase === "idle" && canListen && (
               <button className="btn-primary" onClick={() => listen(msgs)}>🎙 Tocar para responder</button>
             )}
