@@ -27,21 +27,65 @@ function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   });
 }
 
-async function speak(text: string): Promise<void> {
+let blocked = false;
+export function unlockSpeech() {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
-  const voices = await loadVoices();
+  const u = new SpeechSynthesisUtterance(" ");
+  u.volume = 0;
+  window.speechSynthesis.speak(u);
+  window.speechSynthesis.resume();
+  blocked = false;
+}
+
+function speakOne(text: string, voice: SpeechSynthesisVoice | undefined): Promise<boolean> {
   return new Promise((resolve) => {
+    const s = window.speechSynthesis;
     const u = new SpeechSynthesisUtterance(text);
-    const v = voices.find((x) => x.lang === "pt-PT") || voices.find((x) => x.lang.startsWith("pt"));
-    if (v) u.voice = v;
-    u.lang = v?.lang ?? "pt-PT";
+    if (voice) u.voice = voice;
+    u.lang = voice?.lang ?? "pt-PT";
     u.rate = 0.95;
     u.pitch = 1.15;
-    u.onend = () => resolve();
-    u.onerror = () => resolve();
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
+    u.volume = 1;
+    let started = false;
+    let finished = false;
+    const end = (ok: boolean) => {
+      if (finished) return;
+      finished = true;
+      resolve(ok);
+    };
+    u.onstart = () => (started = true);
+    u.onend = () => end(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    u.onerror = (e: any) => end(e?.error !== "not-allowed");
+    s.speak(u);
+    s.resume();
+    // If the browser never starts (blocked), give up after 4s.
+    setTimeout(() => !started && end(false), 4000);
+    // Safety: never hang more than ~20s per sentence.
+    setTimeout(() => end(true), 20000);
   });
+}
+
+async function speak(text: string): Promise<boolean> {
+  if (typeof window === "undefined" || !window.speechSynthesis) return false;
+  const voices = await loadVoices();
+  const v =
+    voices.find((x) => x.lang === "pt-PT") ||
+    voices.find((x) => x.lang === "pt-BR") ||
+    voices.find((x) => x.lang.toLowerCase().startsWith("pt"));
+  const s = window.speechSynthesis;
+  if (s.speaking || s.pending) s.cancel();
+  await new Promise((r) => setTimeout(r, 120));
+  // Chrome cuts long utterances: speak sentence by sentence.
+  const parts = text.match(/[^.!?]+[.!?]*/g)?.map((p) => p.trim()).filter(Boolean) ?? [text];
+  for (const p of parts) {
+    const ok = await speakOne(p, v);
+    if (!ok) {
+      blocked = true;
+      return false;
+    }
+  }
+  return true;
 }
 
 export function VoiceTutor({
@@ -62,6 +106,24 @@ export function VoiceTutor({
   const [phase, setPhase] = useState<Phase>("thinking");
   const [error, setError] = useState<string | null>(null);
   const [canListen, setCanListen] = useState(true);
+  const [needTap, setNeedTap] = useState(false);
+  const pending = useRef<{ text: string; after: () => void } | null>(null);
+  const tapToHear = async () => {
+    unlockSpeech();
+    setNeedTap(false);
+    const p = pending.current;
+    pending.current = null;
+    if (!p) return;
+    setPhase("speaking");
+    await speak(p.text);
+    p.after();
+  };
+  const replay = async () => {
+    const t = [...msgs].reverse().find((m) => m.role === "assistant")?.content;
+    if (!t) return;
+    unlockSpeech();
+    await speak(t);
+  };
   const alive = useRef(true);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recRef = useRef<any>(null);
@@ -126,10 +188,20 @@ export function VoiceTutor({
         setMsgs(next);
         if (wantsDrawing && !done) setPhase("drawing");
         else setPhase("speaking");
-        await speak(clean);
+        const after = () => {
+          if (!alive.current) return;
+          if (done) setPhase("done");
+          else if (wantsDrawing) setPhase("drawing");
+          else listen(next);
+        };
+        const ok = await speak(clean);
         if (!alive.current) return;
-        if (done) setPhase("done");
-        else if (!wantsDrawing) listen(next);
+        if (!ok) {
+          pending.current = { text: clean, after };
+          setNeedTap(true);
+          return;
+        }
+        after();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Erro");
         setPhase("error");
@@ -209,7 +281,15 @@ export function VoiceTutor({
             </div>
           </div>
 
+          {needTap && (
+            <button onClick={tapToHear} className="btn-primary mt-8 w-full py-6 text-2xl anim-float">
+              🔊 Tocar para ouvir a Tia Iris
+            </button>
+          )}
           <div className="mt-8 flex flex-wrap justify-center gap-3">
+            {!needTap && last && (phase === "drawing" || phase === "idle" || phase === "done") && (
+              <button className="btn-ghost text-xl" aria-label="ouvir de novo" onClick={replay}>🔊</button>
+            )}
             {phase === "idle" && canListen && (
               <button className="btn-primary" onClick={() => listen(msgs)}>🎙 Tocar para responder</button>
             )}
