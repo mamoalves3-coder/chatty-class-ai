@@ -14,11 +14,24 @@ function getRecognition(): any {
   return C ? new C() : null;
 }
 
-function speak(text: string): Promise<void> {
+function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   return new Promise((resolve) => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return resolve();
+    const s = window.speechSynthesis;
+    const v = s.getVoices();
+    if (v.length) return resolve(v);
+    const t = setTimeout(() => resolve(s.getVoices()), 1500);
+    s.onvoiceschanged = () => {
+      clearTimeout(t);
+      resolve(s.getVoices());
+    };
+  });
+}
+
+async function speak(text: string): Promise<void> {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  const voices = await loadVoices();
+  return new Promise((resolve) => {
     const u = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
     const v = voices.find((x) => x.lang === "pt-PT") || voices.find((x) => x.lang.startsWith("pt"));
     if (v) u.voice = v;
     u.lang = v?.lang ?? "pt-PT";
@@ -48,7 +61,6 @@ export function VoiceTutor({
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [phase, setPhase] = useState<Phase>("thinking");
   const [error, setError] = useState<string | null>(null);
-  const [typed, setTyped] = useState("");
   const [canListen, setCanListen] = useState(true);
   const alive = useRef(true);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -138,6 +150,13 @@ export function VoiceTutor({
   const sendDrawing = useCallback(
     async (dataUrl: string) => {
       window.speechSynthesis?.cancel();
+      const r = recRef.current;
+      if (r) {
+        r.onend = null;
+        r.onerror = null;
+        r.onresult = null;
+        r.abort?.();
+      }
       const next = [...msgs, { role: "user" as const, content: "(a criança enviou um desenho da lousa)" }];
       setMsgs(next);
       await ask(next, dataUrl);
@@ -203,24 +222,7 @@ export function VoiceTutor({
             )}
           </div>
 
-          {phase === "drawing" && <DrawingBoard onSubmit={sendDrawing} />}
-
-          {(phase === "idle" || phase === "listening") && (
-            <form
-              className="mt-6 flex gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!typed.trim()) return;
-                recRef.current?.abort?.();
-                const t = typed;
-                setTyped("");
-                void send(msgs, t);
-              }}
-            >
-              <input className="field" placeholder="Ou escreve a tua resposta…" value={typed} onChange={(e) => setTyped(e.target.value)} />
-              <button className="btn-ghost">Enviar</button>
-            </form>
-          )}
+          {phase !== "done" && <DrawingBoard onSubmit={sendDrawing} disabled={phase === "thinking"} />}
           {error && <p className="mt-4 text-center text-sm text-destructive">{error}</p>}
         </div>
 
