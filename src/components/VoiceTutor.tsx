@@ -27,14 +27,52 @@ function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   });
 }
 
+let cachedVoice: SpeechSynthesisVoice | undefined;
+
+function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
+  return (
+    voices.find((x) => x.lang === "pt-PT") ||
+    voices.find((x) => x.lang === "pt-BR") ||
+    voices.find((x) => x.lang.toLowerCase().startsWith("pt"))
+  );
+}
+
+// Start loading the voice list as early as possible; Chrome populates it async.
+if (typeof window !== "undefined" && window.speechSynthesis) {
+  const grab = () => {
+    const v = pickVoice(window.speechSynthesis.getVoices());
+    if (v) cachedVoice = v;
+  };
+  grab();
+  window.speechSynthesis.onvoiceschanged = grab;
+}
+
 let blocked = false;
 export function unlockSpeech() {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
+  const s = window.speechSynthesis;
+  s.cancel();
   const u = new SpeechSynthesisUtterance(" ");
   u.volume = 0;
-  window.speechSynthesis.speak(u);
-  window.speechSynthesis.resume();
+  s.speak(u);
+  s.resume();
   blocked = false;
+}
+
+// Speak immediately inside the click handler (user gesture) so the browser
+// cannot block it; cancels anything queued first.
+function speakNow(text: string) {
+  if (typeof window === "undefined" || !window.speechSynthesis || !text.trim()) return;
+  const s = window.speechSynthesis;
+  s.cancel();
+  if (!cachedVoice) cachedVoice = pickVoice(s.getVoices());
+  const u = new SpeechSynthesisUtterance(text);
+  if (cachedVoice) u.voice = cachedVoice;
+  u.lang = cachedVoice?.lang ?? "pt-PT";
+  u.rate = 0.95;
+  u.pitch = 1.15;
+  s.speak(u);
+  s.resume();
 }
 
 function speakOne(text: string, voice: SpeechSynthesisVoice | undefined): Promise<boolean> {
@@ -67,15 +105,14 @@ function speakOne(text: string, voice: SpeechSynthesisVoice | undefined): Promis
 }
 
 async function speak(text: string): Promise<boolean> {
-  if (typeof window === "undefined" || !window.speechSynthesis) return false;
-  const voices = await loadVoices();
-  const v =
-    voices.find((x) => x.lang === "pt-PT") ||
-    voices.find((x) => x.lang === "pt-BR") ||
-    voices.find((x) => x.lang.toLowerCase().startsWith("pt"));
+  if (typeof window === "undefined" || !window.speechSynthesis || !text.trim()) return false;
+  if (!cachedVoice) cachedVoice = pickVoice(await loadVoices());
+  const v = cachedVoice;
   const s = window.speechSynthesis;
-  if (s.speaking || s.pending) s.cancel();
-  await new Promise((r) => setTimeout(r, 120));
+  // Let any greeting already playing finish instead of cutting it off.
+  for (let i = 0; i < 100 && (s.speaking || s.pending); i++) {
+    await new Promise((r) => setTimeout(r, 100));
+  }
   // Chrome cuts long utterances: speak sentence by sentence.
   const parts = text.match(/[^.!?]+[.!?]*/g)?.map((p) => p.trim()).filter(Boolean) ?? [text];
   for (const p of parts) {
@@ -238,10 +275,13 @@ export function VoiceTutor({
   );
 
   const activate = useCallback(() => {
-    unlockSpeech();
+    // Speak a real greeting synchronously inside the click: this is the user
+    // gesture that unblocks audio, and it confirms the voice works.
+    speakNow(`Olá, ${studentName}! Sou a Tia Iris. Deixa-me pensar na primeira pergunta!`);
+    blocked = false;
     setActivated(true);
     void ask([]);
-  }, [ask]);
+  }, [ask, studentName]);
 
   useEffect(() => {
     alive.current = true;
