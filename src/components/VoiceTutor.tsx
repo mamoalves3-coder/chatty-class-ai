@@ -27,14 +27,52 @@ function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   });
 }
 
+let cachedVoice: SpeechSynthesisVoice | undefined;
+
+function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
+  return (
+    voices.find((x) => x.lang === "pt-PT") ||
+    voices.find((x) => x.lang === "pt-BR") ||
+    voices.find((x) => x.lang.toLowerCase().startsWith("pt"))
+  );
+}
+
+// Start loading the voice list as early as possible; Chrome populates it async.
+if (typeof window !== "undefined" && window.speechSynthesis) {
+  const grab = () => {
+    const v = pickVoice(window.speechSynthesis.getVoices());
+    if (v) cachedVoice = v;
+  };
+  grab();
+  window.speechSynthesis.onvoiceschanged = grab;
+}
+
 let blocked = false;
 export function unlockSpeech() {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
+  const s = window.speechSynthesis;
+  s.cancel();
   const u = new SpeechSynthesisUtterance(" ");
   u.volume = 0;
-  window.speechSynthesis.speak(u);
-  window.speechSynthesis.resume();
+  s.speak(u);
+  s.resume();
   blocked = false;
+}
+
+// Speak immediately inside the click handler (user gesture) so the browser
+// cannot block it; cancels anything queued first.
+function speakNow(text: string) {
+  if (typeof window === "undefined" || !window.speechSynthesis || !text.trim()) return;
+  const s = window.speechSynthesis;
+  s.cancel();
+  if (!cachedVoice) cachedVoice = pickVoice(s.getVoices());
+  const u = new SpeechSynthesisUtterance(text);
+  if (cachedVoice) u.voice = cachedVoice;
+  u.lang = cachedVoice?.lang ?? "pt-PT";
+  u.rate = 0.95;
+  u.pitch = 1.15;
+  s.speak(u);
+  s.resume();
 }
 
 function speakOne(text: string, voice: SpeechSynthesisVoice | undefined): Promise<boolean> {
