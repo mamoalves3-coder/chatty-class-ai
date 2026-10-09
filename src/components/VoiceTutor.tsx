@@ -109,8 +109,10 @@ async function speak(text: string): Promise<boolean> {
   if (!cachedVoice) cachedVoice = pickVoice(await loadVoices());
   const v = cachedVoice;
   const s = window.speechSynthesis;
-  if (s.speaking || s.pending) s.cancel();
-  await new Promise((r) => setTimeout(r, 120));
+  // Let any greeting already playing finish instead of cutting it off.
+  for (let i = 0; i < 100 && (s.speaking || s.pending); i++) {
+    await new Promise((r) => setTimeout(r, 100));
+  }
   // Chrome cuts long utterances: speak sentence by sentence.
   const parts = text.match(/[^.!?]+[.!?]*/g)?.map((p) => p.trim()).filter(Boolean) ?? [text];
   for (const p of parts) {
