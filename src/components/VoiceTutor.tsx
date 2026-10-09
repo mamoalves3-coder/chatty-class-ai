@@ -105,12 +105,9 @@ function speakOne(text: string, voice: SpeechSynthesisVoice | undefined): Promis
 }
 
 async function speak(text: string): Promise<boolean> {
-  if (typeof window === "undefined" || !window.speechSynthesis) return false;
-  const voices = await loadVoices();
-  const v =
-    voices.find((x) => x.lang === "pt-PT") ||
-    voices.find((x) => x.lang === "pt-BR") ||
-    voices.find((x) => x.lang.toLowerCase().startsWith("pt"));
+  if (typeof window === "undefined" || !window.speechSynthesis || !text.trim()) return false;
+  if (!cachedVoice) cachedVoice = pickVoice(await loadVoices());
+  const v = cachedVoice;
   const s = window.speechSynthesis;
   if (s.speaking || s.pending) s.cancel();
   await new Promise((r) => setTimeout(r, 120));
