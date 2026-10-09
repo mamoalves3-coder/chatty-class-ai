@@ -267,6 +267,20 @@ export function VoiceTutor({
           </div>
           <p className="mt-2 text-[11px] uppercase tracking-[0.25em] text-primary/70">Aula {lessonNumber} · {studentName}</p>
 
+          {!activated ? (
+            <div className="mt-10 space-y-6 text-center">
+              <div className="relative mx-auto grid h-40 w-40 place-items-center">
+                <span className="anim-ring absolute inset-0 rounded-full border-2 border-primary" />
+                <span className="anim-ring2 absolute inset-0 rounded-full border-2 border-primary" />
+                <div className="grid h-28 w-28 place-items-center rounded-full bg-gradient-logo text-5xl shadow-glow">🔊</div>
+              </div>
+              <button onClick={activate} className="btn-primary anim-float w-full py-8 text-3xl">
+                🔊 Toca aqui para ouvir a Tia!
+              </button>
+              <p className="text-sm text-muted-foreground">Um toque e a Tia Iris começa a falar contigo.</p>
+            </div>
+          ) : (
+          <>
           <div className="relative mx-auto mt-10 grid h-40 w-40 place-items-center">
             {(phase === "listening" || phase === "speaking") && (
               <>
