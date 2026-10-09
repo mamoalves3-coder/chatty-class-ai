@@ -327,7 +327,7 @@ export function VoiceTutor({
   );
 }
 
-const INKS = ["#22d3ee", "#34d399", "#f472b6", "#facc15", "#ffffff"];
+const INKS = ["#ef4444", "#f97316", "#facc15", "#34d399", "#22d3ee", "#3b82f6", "#a855f7", "#f472b6", "#ffffff", "#0f172a"];
 
 function DrawingBoard({ onSubmit, disabled }: { onSubmit: (dataUrl: string) => void; disabled?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
