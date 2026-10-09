@@ -273,10 +273,13 @@ export function VoiceTutor({
   );
 
   const activate = useCallback(() => {
-    unlockSpeech();
+    // Speak a real greeting synchronously inside the click: this is the user
+    // gesture that unblocks audio, and it confirms the voice works.
+    speakNow(`Olá, ${studentName}! Sou a Tia Iris. Deixa-me pensar na primeira pergunta!`);
+    blocked = false;
     setActivated(true);
     void ask([]);
-  }, [ask]);
+  }, [ask, studentName]);
 
   useEffect(() => {
     alive.current = true;
