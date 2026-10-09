@@ -237,9 +237,14 @@ export function VoiceTutor({
     [msgs, ask],
   );
 
+  const activate = useCallback(() => {
+    unlockSpeech();
+    setActivated(true);
+    void ask([]);
+  }, [ask]);
+
   useEffect(() => {
     alive.current = true;
-    void ask([]);
     return () => {
       alive.current = false;
       recRef.current?.abort?.();
