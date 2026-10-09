@@ -103,7 +103,8 @@ export function VoiceTutor({
 }) {
   const turn = useServerFn(tutorTurn);
   const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [phase, setPhase] = useState<Phase>("thinking");
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [activated, setActivated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [canListen, setCanListen] = useState(true);
   const [needTap, setNeedTap] = useState(false);
