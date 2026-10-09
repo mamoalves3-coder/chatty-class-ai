@@ -324,6 +324,8 @@ export function VoiceTutor({
 
           {phase !== "done" && <DrawingBoard onSubmit={sendDrawing} disabled={phase === "thinking"} />}
           {error && <p className="mt-4 text-center text-sm text-destructive">{error}</p>}
+          </>
+          )}
         </div>
 
         <div className="space-y-4">
