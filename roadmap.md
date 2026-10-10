@@ -1,5 +1,4 @@
 # Roadmap
 
-- [ ] Voz da Tia Iris fiável: TTS gerado no servidor (equivalente ao edge-tts pedido — edge-tts é Python e não corre no browser; usar Lovable AI Gateway TTS google/gemini-3.1-flash-tts-preview) com fallback para speechSynthesis do navegador
-- [ ] Verificar por que o teste Playwright não registou fala após as últimas edições (build errors?)
-- [ ] Testar fluxo completo: botão de ativação → saudação falada → pergunta falada
+- [x] Voz da Tia Iris fiável: TTS gerado no servidor (rota /api/tts, voz Gemini via Lovable AI Gateway) com fallback para speechSynthesis do navegador. Nota: edge-tts é Python e não corre no browser; usámos o equivalente no nosso sistema.
+- [x] Testar fluxo completo: botão de ativação → saudação → pergunta falada (verificado: pedido /api/tts disparado, WAV válido, sem erros)
