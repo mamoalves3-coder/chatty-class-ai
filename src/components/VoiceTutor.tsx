@@ -104,6 +104,50 @@ function speakOne(text: string, voice: SpeechSynthesisVoice | undefined): Promis
   });
 }
 
+let currentAudio: HTMLAudioElement | null = null;
+
+// Server-generated voice (real audio file). Returns false when unavailable so
+// the caller can fall back to the browser's built-in voice.
+async function speakServer(text: string, token: string): Promise<boolean> {
+  if (!text.trim()) return false;
+  try {
+    const r = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, text }),
+    });
+    if (!r.ok) return false;
+    const blob = await r.blob();
+    if (!blob.size) return false;
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    currentAudio = audio;
+    return await new Promise<boolean>((resolve) => {
+      let done = false;
+      const end = (ok: boolean) => {
+        if (done) return;
+        done = true;
+        URL.revokeObjectURL(url);
+        if (currentAudio === audio) currentAudio = null;
+        resolve(ok);
+      };
+      audio.onended = () => end(true);
+      audio.onerror = () => end(false);
+      audio.play().then(
+        () => setTimeout(() => end(true), 60000),
+        () => end(false),
+      );
+    });
+  } catch {
+    return false;
+  }
+}
+
+function stopServerAudio() {
+  currentAudio?.pause();
+  currentAudio = null;
+}
+
 async function speak(text: string): Promise<boolean> {
   if (typeof window === "undefined" || !window.speechSynthesis || !text.trim()) return false;
   if (!cachedVoice) cachedVoice = pickVoice(await loadVoices());
