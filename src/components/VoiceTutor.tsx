@@ -183,6 +183,15 @@ export function VoiceTutor({
   onClose: () => void;
 }) {
   const turn = useServerFn(tutorTurn);
+  // Server voice first (real audio), browser voice as fallback.
+  const speakOut = useCallback(
+    async (text: string) => {
+      const ok = await speakServer(text, token);
+      if (ok) return true;
+      return speak(text);
+    },
+    [token],
+  );
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [phase, setPhase] = useState<Phase>("idle");
   const [activated, setActivated] = useState(false);
@@ -197,14 +206,14 @@ export function VoiceTutor({
     pending.current = null;
     if (!p) return;
     setPhase("speaking");
-    await speak(p.text);
+    await speakOut(p.text);
     p.after();
   };
   const replay = async () => {
     const t = [...msgs].reverse().find((m) => m.role === "assistant")?.content;
     if (!t) return;
     unlockSpeech();
-    await speak(t);
+    await speakOut(t);
   };
   const alive = useRef(true);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -276,7 +285,7 @@ export function VoiceTutor({
           else if (wantsDrawing) setPhase("drawing");
           else listen(next);
         };
-        const ok = await speak(clean);
+        const ok = await speakOut(clean);
         if (!alive.current) return;
         if (!ok) {
           pending.current = { text: clean, after };
