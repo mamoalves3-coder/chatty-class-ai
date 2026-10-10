@@ -313,6 +313,7 @@ export function VoiceTutor({
   const sendDrawing = useCallback(
     async (dataUrl: string) => {
       window.speechSynthesis?.cancel();
+      stopServerAudio();
       const r = recRef.current;
       if (r) {
         r.onend = null;
@@ -342,6 +343,7 @@ export function VoiceTutor({
       alive.current = false;
       recRef.current?.abort?.();
       window.speechSynthesis?.cancel();
+      stopServerAudio();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
