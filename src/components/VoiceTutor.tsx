@@ -104,6 +104,50 @@ function speakOne(text: string, voice: SpeechSynthesisVoice | undefined): Promis
   });
 }
 
+let currentAudio: HTMLAudioElement | null = null;
+
+// Server-generated voice (real audio file). Returns false when unavailable so
+// the caller can fall back to the browser's built-in voice.
+async function speakServer(text: string, token: string): Promise<boolean> {
+  if (!text.trim()) return false;
+  try {
+    const r = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, text }),
+    });
+    if (!r.ok) return false;
+    const blob = await r.blob();
+    if (!blob.size) return false;
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    currentAudio = audio;
+    return await new Promise<boolean>((resolve) => {
+      let done = false;
+      const end = (ok: boolean) => {
+        if (done) return;
+        done = true;
+        URL.revokeObjectURL(url);
+        if (currentAudio === audio) currentAudio = null;
+        resolve(ok);
+      };
+      audio.onended = () => end(true);
+      audio.onerror = () => end(false);
+      audio.play().then(
+        () => setTimeout(() => end(true), 60000),
+        () => end(false),
+      );
+    });
+  } catch {
+    return false;
+  }
+}
+
+function stopServerAudio() {
+  currentAudio?.pause();
+  currentAudio = null;
+}
+
 async function speak(text: string): Promise<boolean> {
   if (typeof window === "undefined" || !window.speechSynthesis || !text.trim()) return false;
   if (!cachedVoice) cachedVoice = pickVoice(await loadVoices());
@@ -139,6 +183,15 @@ export function VoiceTutor({
   onClose: () => void;
 }) {
   const turn = useServerFn(tutorTurn);
+  // Server voice first (real audio), browser voice as fallback.
+  const speakOut = useCallback(
+    async (text: string) => {
+      const ok = await speakServer(text, token);
+      if (ok) return true;
+      return speak(text);
+    },
+    [token],
+  );
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [phase, setPhase] = useState<Phase>("idle");
   const [activated, setActivated] = useState(false);
@@ -153,14 +206,14 @@ export function VoiceTutor({
     pending.current = null;
     if (!p) return;
     setPhase("speaking");
-    await speak(p.text);
+    await speakOut(p.text);
     p.after();
   };
   const replay = async () => {
     const t = [...msgs].reverse().find((m) => m.role === "assistant")?.content;
     if (!t) return;
     unlockSpeech();
-    await speak(t);
+    await speakOut(t);
   };
   const alive = useRef(true);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -232,7 +285,7 @@ export function VoiceTutor({
           else if (wantsDrawing) setPhase("drawing");
           else listen(next);
         };
-        const ok = await speak(clean);
+        const ok = await speakOut(clean);
         if (!alive.current) return;
         if (!ok) {
           pending.current = { text: clean, after };
@@ -260,6 +313,7 @@ export function VoiceTutor({
   const sendDrawing = useCallback(
     async (dataUrl: string) => {
       window.speechSynthesis?.cancel();
+      stopServerAudio();
       const r = recRef.current;
       if (r) {
         r.onend = null;
@@ -289,6 +343,7 @@ export function VoiceTutor({
       alive.current = false;
       recRef.current?.abort?.();
       window.speechSynthesis?.cancel();
+      stopServerAudio();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
